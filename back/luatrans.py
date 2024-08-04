@@ -1,4 +1,4 @@
-from gsl_nodes import *
+from front.nodes import *
 
 class LuaTranspiler:
     def run(self, ast: list[Node]):

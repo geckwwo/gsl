@@ -1,5 +1,5 @@
-from gsl_lexer import Token, TokenType, Keyword
-from gsl_nodes import *
+from front.lexer import Token, TokenType, Keyword
+from front.nodes import *
 
 class CmpToBinOp:
     EQ = BinOp.EQ
