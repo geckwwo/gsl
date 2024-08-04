@@ -1,0 +1,197 @@
+from gsl_lexer import Token, TokenType, Keyword
+from gsl_nodes import *
+
+class CmpToBinOp:
+    EQ = BinOp.EQ
+    NEQ = BinOp.NEQ
+    LT = BinOp.LT
+    LTE = BinOp.LTE
+    GT = BinOp.GT
+    GTE = BinOp.GTE
+class P1ToBinOp:
+    PLUS = BinOp.ADD
+    MINUS = BinOp.SUB
+class P2ToBinOp:
+    MUL = BinOp.MUL
+    DIV = BinOp.DIV
+
+class Parser:
+    def __reset(self, tokens):
+        self.tokens = tokens
+        self.tok = None
+        self.idx = -1
+
+    def next(self, step=1):
+        self.idx += step
+        self.tok = self.tokens[self.idx] if self.idx < len(self.tokens) else None
+
+    def run(self, tokens):
+        self.__reset(tokens)
+        self.next()
+        body = []
+        while self.tok is not None:
+            body.append(self.stmt())
+        return body
+    
+    def stmt(self):
+        if self.tok.type == TokenType.KEYWORD:
+            if self.tok.value == Keyword.IF:
+                return self.if_stmt()
+            else:
+                assert False, f"keyword '{self.tok.value}' is not implemented"
+        else:
+            e = self.expr()
+            if self.tok.type == TokenType.ASSIGN:
+                self.next()
+                assert isinstance(e, (NodeIden,)), f"cannot assign to {e}"
+                e = NodeAssign(e, self.expr())
+            assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
+            self.next()
+
+            return e
+    
+    def if_stmt(self):
+        assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.IF, "'if' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.LPAR, "'(' expected"
+        self.next()
+
+        cond = self.expr()
+
+        assert self.tok.type == TokenType.RPAR, "')' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.LCUR, "'{' expected"
+        self.next()
+
+        body = []
+        while self.tok.type != TokenType.RCUR:
+            body.append(self.stmt())
+        self.next()
+        
+        elseifs = []
+        while self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.ELSEIF:
+            self.next()
+
+            assert self.tok.type == TokenType.LPAR, "'(' expected"
+            self.next()
+
+            cond2 = self.expr()
+
+            assert self.tok.type == TokenType.RPAR, "')' expected"
+            self.next()
+
+            assert self.tok.type == TokenType.LCUR, "'{' expected"
+            self.next()
+
+            body2 = []
+            while self.tok.type != TokenType.RCUR:
+                body2.append(self.stmt())
+            self.next()
+            elseifs.append((cond2,body2))
+        
+        else_ = []
+        if self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.ELSE:
+            self.next()
+
+            assert self.tok.type == TokenType.LCUR, "'{' expected"
+            self.next()
+
+            while self.tok.type != TokenType.RCUR:
+                else_.append(self.stmt())
+            self.next()
+        return NodeIf(cond, body, elseifs, else_)
+    
+    def expr(self):
+        """
+        Priority
+        Bottom 1 == != >= > <= <
+        |      2 + -
+        |      3 * /
+        |      4 (?)
+        |      5 (?)
+        |      6 (?)
+        Top    7 [] . call
+               8 () atom
+        """
+        left = self.expr2()
+        while self.tok.type.name in dir(CmpToBinOp):
+            op = getattr(CmpToBinOp,self.tok.type.name)
+            self.next()
+            right = self.expr()
+            left = NodeBinOp(left,op,right)
+        return left
+    def expr2(self):
+        left = self.expr3()
+        while self.tok.type.name in dir(P1ToBinOp):
+            op = getattr(P1ToBinOp,self.tok.type.name)
+            self.next()
+            right = self.expr()
+            left = NodeBinOp(left,op,right)
+        return left
+    def expr3(self):
+        left = self.expr7()
+        while self.tok.type.name in dir(P2ToBinOp):
+            op = getattr(P2ToBinOp,self.tok.type.name)
+            self.next()
+            right = self.expr()
+            left = NodeBinOp(left,op,right)
+        return left
+    def expr7(self):
+        left = self.expr8()
+        while self.tok.type in (TokenType.DOT, TokenType.LPAR, TokenType.LBRK):
+            if self.tok.type == TokenType.LPAR:
+                self.next()
+                args = []
+                while True:
+                    args.append(self.expr())
+                    assert self.tok.type in (TokenType.RPAR, TokenType.COMMA), "',' or ')' expected"
+                    if self.tok.type == TokenType.RPAR:
+                        self.next()
+                        break
+                    else:
+                        self.next()
+                left = NodeCall(left, args)
+            elif self.tok.type == TokenType.LBRK:
+                self.next()
+                index = self.expr()
+                assert self.tok.type == TokenType.RBRK, "']' expected"
+                self.next()
+                left = NodeIndex(left, index)
+            elif self.tok.type == TokenType.DOT:
+                self.next()
+                attr = self.expr()
+                left = NodeAttr(left, attr)
+            else:
+                raise NotImplementedError(f"expr7 {self.tok}")
+        return left
+    def expr8(self):
+        if self.tok.type in (TokenType.INT, TokenType.FLOAT, TokenType.STR):
+            v = self.tok.value
+            self.next()
+            return NodeConst(v)
+        elif self.tok.type == TokenType.IDEN:
+            v = self.tok.value
+            self.next()
+            return NodeIden(v)
+        elif self.tok.type == TokenType.LPAR:
+            self.next()
+            v = self.expr()
+            assert self.tok.type == TokenType.RPAR, "')' expected"
+            self.next()
+            return v
+        elif self.tok.type == TokenType.LBRK:
+            self.next()
+            args = []
+            while True:
+                args.append(self.expr())
+                assert self.tok.type in (TokenType.RBRK, TokenType.COMMA), "',' or ']' expected"
+                if self.tok.type == TokenType.RBRK:
+                    self.next()
+                    break
+                else:
+                    self.next()
+            return NodeList(args)
+        else:
+            raise NotImplementedError(f"atom {self.tok} err")

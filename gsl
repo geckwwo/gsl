@@ -1,0 +1,30 @@
+#!/usr/bin/python3
+import sys
+import os
+from gsl_lexer import Lexer
+from gsl_parser import Parser
+
+from backends.luatrans import LuaTranspiler
+
+DBG = False
+
+f = open(sys.argv[1]).read()
+if DBG:
+    print(f"-- Source\n{f}\n")
+
+tokens = Lexer().run(f)
+if DBG:
+    print(f"-- Tokens\n{tokens}\n")
+
+ast = Parser().run(tokens)
+if DBG:
+    print(f"-- AST\n{ast}\n")
+
+# TODO: IR for multiple backends
+
+code = LuaTranspiler().run(ast)
+if DBG:
+    print(f"-- Lua code\n{code}\n")
+
+open(f"{sys.argv[1]}._gsltrans.lua", "w").write(code)
+os.system(f"luajit {sys.argv[1]}._gsltrans.lua")

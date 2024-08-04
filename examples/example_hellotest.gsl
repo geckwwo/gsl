@@ -1,0 +1,7 @@
+a = 123;
+if(a == 20 + 3 + 2 * 50) {
+  print("math is mathing");
+  print(20 + 3 + 2 * 50, a);
+} else {
+  print("math broke :(");
+}
