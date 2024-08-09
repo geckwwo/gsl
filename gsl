@@ -1,36 +1,50 @@
 #!/usr/bin/python3
 import sys
 import os
+import traceback
 
 from lang.front.lexer import Lexer
 from lang.front.parser import Parser
 from lang.middle.ir import IRGenerator
-#from lang.back.luatrans import LuaTranspiler
 from lang.back.azureleaf import AzureLeafCompiler
+from lang.vm.vm import AzureLeafExecutor, AzureLeafScopedExecutionContext, AzureLeafDataContext
 
-DBG = True
+def tokenize(src: str):
+    l = Lexer()
+    try:
+        return None, l, l.run(src)
+    except Exception as e:
+        traceback.print_exception(e)
+        return e, l, None
 
-f = open(sys.argv[1]).read()
-if DBG:
-    print(f"-- Source\n{f}\n")
+def parse(tokens):
+    l = Parser()
+    try:
+        return None, l, l.run(tokens)
+    except Exception as e:
+        traceback.print_exception(e)
+        return e, l, None
 
-tokens = Lexer().run(f)
-if DBG:
-    print(f"-- Tokens\n{tokens}\n")
+def generate_ir(ast):
+    l = IRGenerator()
+    try:
+        return None, l, l.run(ast)
+    except Exception as e:
+        traceback.print_exception(e)
+        return e, l, None
 
-ast = Parser().run(tokens)
-if DBG:
-    print(f"-- AST\n{ast}\n")
+def compile_azureleaf(ir):
+    l = AzureLeafCompiler()
+    try:
+        return None, l, l.visit(ir)
+    except Exception as e:
+        traceback.print_exception(e)
+        return e, l, None
 
-# TODO: IR for multiple backends
-ir = IRGenerator().run(ast)
-if DBG:
-    print(f"-- IR\n{ir}\n")
-
-#code = LuaTranspiler().run(ir) + "\n__gslmain__()\n"
-code = AzureLeafCompiler().visit(ir)
-if DBG:
-    print(f"-- Azure Leaf repr\n{code}\n")
-
-#open(f"{sys.argv[1]}._gsltrans.lua", "w").write(code)
-#os.system(f"luajit {sys.argv[1]}._gsltrans.lua")
+if __name__ == "__main__":
+    c = compile_azureleaf(generate_ir(parse(tokenize(open(sys.argv[1]).read())[2])[2])[2])[2]
+    x = AzureLeafScopedExecutionContext(c.name, c.body)
+    e = AzureLeafExecutor({"print": lambda ctx, exec, *stuff: print(*stuff)})
+    e.push_context(x, c.args, ())
+    while e.tick():
+        pass

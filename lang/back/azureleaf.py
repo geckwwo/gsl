@@ -13,7 +13,8 @@ class ALFunction(ALComponent):
         self.body = body
 
 class ALInvoke(ALComponent):
-    pass
+    def __init__(self, amount):
+        self.amount = amount
 
 class ALDrop(ALComponent):
     pass
@@ -44,7 +45,7 @@ class AzureLeafCompiler:
         v = []
         v.extend(flatmap(self.visit, ic.args))
         v.extend(self.visit(ic.called))
-        v.append(ALInvoke())
+        v.append(ALInvoke(len(ic.args)))
         return v
     def visit_IRDiscard(self, ic: IRDiscard):
         x = self.visit(ic.value)
