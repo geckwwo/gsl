@@ -284,8 +284,9 @@ class Parser:
         while self.tok.type in (TokenType.DOT, TokenType.LPAR, TokenType.LBRK):
             if self.tok.type == TokenType.DOT:
                 self.next()
-                attr = self.expr()
-                left = NodeAttr(left, attr)
+                assert self.tok.type == TokenType.IDEN, "identifier expected"
+                left = NodeAttr(left, self.tok.value)
+                self.next()
             
             elif self.tok.type == TokenType.LBRK:
                 self.next()
