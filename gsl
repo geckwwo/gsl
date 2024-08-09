@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 import sys
 import os
-from front.lexer import Lexer
-from front.parser import Parser
 
-from back.luatrans import LuaTranspiler
+from lang.front.lexer import Lexer
+from lang.front.parser import Parser
+from lang.middle.ir import IRGenerator
+#from lang.back.luatrans import LuaTranspiler
+from lang.back.azureleaf import AzureLeafCompiler
 
-DBG = False
+DBG = True
 
 f = open(sys.argv[1]).read()
 if DBG:
@@ -21,10 +23,14 @@ if DBG:
     print(f"-- AST\n{ast}\n")
 
 # TODO: IR for multiple backends
-
-code = LuaTranspiler().run(ast)
+ir = IRGenerator().run(ast)
 if DBG:
-    print(f"-- Lua code\n{code}\n")
+    print(f"-- IR\n{ir}\n")
 
-open(f"{sys.argv[1]}._gsltrans.lua", "w").write(code)
-os.system(f"luajit {sys.argv[1]}._gsltrans.lua")
+#code = LuaTranspiler().run(ir) + "\n__gslmain__()\n"
+code = AzureLeafCompiler().visit(ir)
+if DBG:
+    print(f"-- Azure Leaf repr\n{code}\n")
+
+#open(f"{sys.argv[1]}._gsltrans.lua", "w").write(code)
+#os.system(f"luajit {sys.argv[1]}._gsltrans.lua")

@@ -1,0 +1,29 @@
+
+fun gen(n) {
+	return coroutine.wrap(fun() {
+		for (i=2, n) { 
+			coroutine.yield(i);
+        }
+    });
+}
+
+fun filter(p, g) {
+	return coroutine.wrap(fun() {
+		foreach (n in g) {
+			if (n%p != 0) {
+				coroutine.yield(n);
+            }
+        }
+    });
+}
+
+N = 100;
+x = gen(N);
+while (1) {
+	n = x();
+	if (n == null) {
+		break;
+    }
+	print(n);
+	x = filter(n, x);
+}

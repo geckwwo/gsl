@@ -38,20 +38,53 @@ class NodeIf(Node):
         self.elseifs = elseifs
         self.else_ = else_
 
+class NodeWhile(Node):
+    def __init__(self, cond, body):
+        self.cond = cond
+        self.body = body
+class NodeBreak(Node):
+    def __init__(self):
+        pass
+
 class NodeCall(Node):
     def __init__(self, callee, args):
         self.callee = callee
         self.args = args
 
+class NodeFunction(Node):
+    def __init__(self, name, args, body):
+        self.name = name
+        self.args = args
+        self.body = body
+
+class NodeFor(Node):
+    def __init__(self, initname, initval, endval, body):
+        self.initname = initname
+        self.initval = initval
+        self.endval = endval
+        self.body = body
+
+class NodeForeach(Node):
+    def __init__(self, initname, iterator, body):
+        self.initname = initname
+        self.iterator = iterator
+        self.body = body
+
+
 class NodeDiscard(Node):
     def __init__(self, expr):
-        self.expr(expr)
+        self.expr = expr
+
+class NodeReturn(Node):
+    def __init__(self, value):
+        self.value = value
 
 class BinOp(enum.Enum):
     ADD = 1
     SUB = 2
     MUL = 3
     DIV = 4
+    MOD = 5
 
     EQ = 10
     NEQ = 11

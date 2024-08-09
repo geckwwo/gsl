@@ -7,6 +7,7 @@ class TokenType(enum.Enum):
     FLOAT = 3
     STR = 4
     KEYWORD = 5
+    NULL = 6
 
     LPAR = "("
     RPAR = ")"
@@ -23,11 +24,13 @@ class TokenType(enum.Enum):
     MINUS = 11
     MUL = 12
     DIV = 13
+    MOD = 14
 
     INLINE_PLUS = 1010
     INLINE_MINUS = 1011
     INLINE_MUL = 1012
     INLINE_DIV = 1013
+    INLINE_MOD = 1014
 
     ASSIGN = 20
 
@@ -53,6 +56,11 @@ class Keyword(enum.Enum):
     ELSEIF = "elseif"
     WHILE = "while"
     FOR = "for"
+    FOREACH = "foreach"
+    IN = "in"
+    BREAK = "break"
+    RETURN = "return"
+    FUN = "fun"
 
 class Token:
     def __init__(self, token_type, value, rel=None, line=None):
@@ -102,8 +110,8 @@ class Lexer:
                     self.token(TokenType.FLOAT, float(num), rel)
                 else:
                     self.token(TokenType.INT, int(num), rel)
-            elif self.ch in "+-*/":
-                mp = {"+": "PLUS", "-": "MINUS", "*": "MUL", "/": "DIV"}[self.ch]
+            elif self.ch in "+-*/%":
+                mp = {"+": "PLUS", "-": "MINUS", "*": "MUL", "/": "DIV", "%": "MOD"}[self.ch]
                 self.next()
                 if self.ch == "=":
                     self.token(getattr(TokenType, "INLINE_" + mp, rel=self.rel-1))
@@ -132,6 +140,8 @@ class Lexer:
                     self.next()
                 if iden not in Keyword:
                     self.token(TokenType.IDEN, iden, rel=rel)
+                elif iden.lower() == "null":
+                    self.token(TokenType.NULL, rel=rel)
                 else:
                     self.token(TokenType.KEYWORD, Keyword(iden), rel=rel)
             elif self.ch in "\"'":

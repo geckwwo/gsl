@@ -1,4 +1,8 @@
-from front.nodes import *
+from lang.front.nodes import *
+
+###########################################
+### TODO: DEPRECATED! REWRITE TO USE IR ###
+###########################################
 
 class LuaTranspiler:
     def run(self, ast: list[Node]):
@@ -28,12 +32,28 @@ class LuaTranspiler:
         if len(node.else_) > 0:
             code += "else\n"
             code += "\n".join(map(lambda x: self.visit(x, tabs+1), node.else_)) + "\n"
-        code += "end"
+        code += ("\t"*tabs) + "end"
         return code
     def visit_NodeBinOp(self, node: NodeBinOp, tabs):
         op = {
             BinOp.ADD: "+",
             BinOp.MUL: "*",
-            BinOp.EQ: "=="
+            BinOp.MOD: "%",
+            BinOp.EQ: "==",
+            BinOp.NEQ: "~="
         }[node.op]
         return ("\t"*tabs) + f"{self.visit(node.left, 0)} {op} {self.visit(node.right, 0)}"
+    def visit_NodeFunction(self, node: NodeFunction, tabs):
+        return ("\t"*tabs) + f"function {node.name if node.name is not None else ''}({', '.join(node.args)})\n{'\n'.join(map(lambda x: self.visit(x, tabs+1), node.body))}\n" + ("\t"*tabs) + "end"
+    def visit_NodeReturn(self, node: NodeReturn, tabs):
+        return ("\t"*tabs) + f"return {self.visit(node.value, 0)}"
+    def visit_NodeAttr(self, node: NodeAttr, tabs):
+        return ("\t"*tabs) + f"{self.visit(node.obj, 0)}.{self.visit(node.attr, 0)}"
+    def visit_NodeFor(self, node: NodeFor, tabs):
+        return ("\t"*tabs) + f"for {node.initname} = {self.visit(node.initval, 0)}, {self.visit(node.endval, 0)} do\n{'\n'.join(map(lambda x: self.visit(x, tabs+1), node.body))}\n" + ("\t"*tabs) + "end"
+    def visit_NodeForeach(self, node: NodeForeach, tabs):
+        return ("\t"*tabs) + f"for {node.initname} in {self.visit(node.iterator, 0)} do\n{'\n'.join(map(lambda x: self.visit(x, tabs+1), node.body))}\n" + ("\t"*tabs) + "end"
+    def visit_NodeWhile(self, node: NodeWhile, tabs):
+        return ("\t"*tabs) + f"while {self.visit(node.cond, 0)} do\n{'\n'.join(map(lambda x: self.visit(x, tabs+1), node.body))}\n" + ("\t"*tabs) + "end"
+    def visit_NodeBreak(self, node: NodeBreak, tabs):
+        return ("\t"*tabs) + f"break"

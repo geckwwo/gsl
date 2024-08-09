@@ -1,5 +1,5 @@
-from front.lexer import Token, TokenType, Keyword
-from front.nodes import *
+from lang.front.lexer import Token, TokenType, Keyword
+from lang.front.nodes import *
 
 class CmpToBinOp:
     EQ = BinOp.EQ
@@ -14,7 +14,7 @@ class P1ToBinOp:
 class P2ToBinOp:
     MUL = BinOp.MUL
     DIV = BinOp.DIV
-
+    MOD = BinOp.MOD
 class Parser:
     def __reset(self, tokens):
         self.tokens = tokens
@@ -37,6 +37,25 @@ class Parser:
         if self.tok.type == TokenType.KEYWORD:
             if self.tok.value == Keyword.IF:
                 return self.if_stmt()
+            elif self.tok.value == Keyword.WHILE:
+                return self.while_stmt()
+            elif self.tok.value == Keyword.FUN:
+                return self.func()
+            elif self.tok.value == Keyword.FOR:
+                return self.for_stmt()
+            elif self.tok.value == Keyword.FOREACH:
+                return self.foreach_stmt()
+            elif self.tok.value == Keyword.RETURN:
+                self.next()
+                val = self.expr()
+                assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
+                self.next()
+                return NodeReturn(val)
+            elif self.tok.value == Keyword.BREAK:
+                self.next()
+                assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
+                self.next()
+                return NodeBreak()
             else:
                 assert False, f"keyword '{self.tok.value}' is not implemented"
         else:
@@ -44,12 +63,134 @@ class Parser:
             if self.tok.type == TokenType.ASSIGN:
                 self.next()
                 assert isinstance(e, (NodeIden,)), f"cannot assign to {e}"
+                print("assign to", e)
                 e = NodeAssign(e, self.expr())
+                assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
+                self.next()
+                return e
             assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
             self.next()
 
-            return e
+            return NodeDiscard(e)
+
+    def for_stmt(self):
+        assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.FOR, "'for' expected"
+        self.next()
+        
+        assert self.tok.type == TokenType.LPAR, "'(' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.IDEN, "identifier expected"
+        initname = self.tok.value
+        self.next()
+
+        assert self.tok.type == TokenType.ASSIGN, "'=' expected"
+        self.next()
+
+        initval = self.expr()
+
+        assert self.tok.type == TokenType.COMMA, "',' expected"
+        self.next()
+
+        endval = self.expr()
+
+        assert self.tok.type == TokenType.RPAR, "')' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.LCUR, "'{' expected"
+        self.next()
+        
+        body = []
+        while self.tok.type != TokenType.RCUR:
+            body.append(self.stmt())
+        self.next()
+        return NodeFor(initname, initval, endval, body)
     
+    def foreach_stmt(self):
+        assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.FOREACH, "'foreach' expected"
+        self.next()
+        
+        assert self.tok.type == TokenType.LPAR, "'(' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.IDEN, "identifier expected"
+        initname = self.tok.value
+        self.next()
+
+        assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.IN, "'in' expected"
+        self.next()
+
+        endval = self.expr()
+
+        assert self.tok.type == TokenType.RPAR, "')' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.LCUR, "'{' expected"
+        self.next()
+        
+        body = []
+        while self.tok.type != TokenType.RCUR:
+            body.append(self.stmt())
+        self.next()
+        return NodeForeach(initname, endval, body)
+
+    def func(self):
+        assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.FUN, "'fun' expected"
+        self.next()
+        
+        assert self.tok.type in (TokenType.LPAR, TokenType.IDEN), "'(' or identifier expected"
+        name = None
+        if self.tok.type == TokenType.IDEN:
+            name = self.tok.value
+            self.next()
+            assert self.tok.type == TokenType.LPAR, "'(' expected"
+        self.next()
+        args = []
+        while True:
+            if self.tok.type == TokenType.RPAR:
+                self.next()
+                break
+            assert self.tok.type == TokenType.IDEN, "identifier expected"
+            args.append(self.tok.value)
+            self.next()
+            assert self.tok.type in (TokenType.COMMA, TokenType.RPAR), "',' or ')' expected"
+            if self.tok.type == TokenType.RPAR:
+                self.next()
+                break
+            else:
+                self.next()
+        
+        assert self.tok.type == TokenType.LCUR, "'{' expected"
+        self.next()
+
+        body = []
+        while self.tok.type != TokenType.RCUR:
+            body.append(self.stmt())
+        self.next()
+        return NodeFunction(name, args, body)
+    
+    def while_stmt(self):
+        assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.WHILE, "'while' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.LPAR, "'(' expected"
+        self.next()
+
+        cond = self.expr()
+
+        assert self.tok.type == TokenType.RPAR, "')' expected"
+        self.next()
+
+        assert self.tok.type == TokenType.LCUR, "'{' expected"
+        self.next()
+
+        body = []
+        while self.tok.type != TokenType.RCUR:
+            body.append(self.stmt())
+        self.next()
+        
+        return NodeWhile(cond, body)
+
     def if_stmt(self):
         assert self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.IF, "'if' expected"
         self.next()
@@ -141,10 +282,24 @@ class Parser:
     def expr7(self):
         left = self.expr8()
         while self.tok.type in (TokenType.DOT, TokenType.LPAR, TokenType.LBRK):
-            if self.tok.type == TokenType.LPAR:
+            if self.tok.type == TokenType.DOT:
+                self.next()
+                attr = self.expr()
+                left = NodeAttr(left, attr)
+            
+            elif self.tok.type == TokenType.LBRK:
+                self.next()
+                index = self.expr()
+                assert self.tok.type == TokenType.RBRK, "']' expected"
+                self.next()
+                left = NodeIndex(left, index)
+            elif self.tok.type == TokenType.LPAR:
                 self.next()
                 args = []
                 while True:
+                    if self.tok.type == TokenType.RPAR:
+                        self.next()
+                        break
                     args.append(self.expr())
                     assert self.tok.type in (TokenType.RPAR, TokenType.COMMA), "',' or ')' expected"
                     if self.tok.type == TokenType.RPAR:
@@ -153,16 +308,6 @@ class Parser:
                     else:
                         self.next()
                 left = NodeCall(left, args)
-            elif self.tok.type == TokenType.LBRK:
-                self.next()
-                index = self.expr()
-                assert self.tok.type == TokenType.RBRK, "']' expected"
-                self.next()
-                left = NodeIndex(left, index)
-            elif self.tok.type == TokenType.DOT:
-                self.next()
-                attr = self.expr()
-                left = NodeAttr(left, attr)
             else:
                 raise NotImplementedError(f"expr7 {self.tok}")
         return left
@@ -193,5 +338,7 @@ class Parser:
                 else:
                     self.next()
             return NodeList(args)
+        elif self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.FUN:
+            return self.func()
         else:
             raise NotImplementedError(f"atom {self.tok} err")
