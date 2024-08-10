@@ -53,7 +53,6 @@ class AzureLeafScopedExecutionContext:
             self.stack.append(self.stack[-1])
         elif isinstance(i, ALInvoke):
             called = self.stack.pop()
-            #print(called)
             args = (self.stack.pop() for _ in range(i.amount))
             self.stack.append(called(self,executor,*reversed(list(args))))
         elif isinstance(i, ALPushBody):

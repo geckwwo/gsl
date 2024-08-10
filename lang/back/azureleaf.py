@@ -138,7 +138,7 @@ class AzureLeafCompiler:
         v.extend([ALPushConst(itername), ALGet(), ALPushConst("__gsl_iter_get"), ALGet(), ALInvoke(1), ALDupe()])
         v.extend([ALPushConst("__gsl_iter_get_sentinel"), ALGet(), ALInvoke(0), ALCompare()])
         body = [ALPushConst(ic.name),ALPutLocal(),*flatmap(self.visit, ic.body)]
-        body.append(ALJumpRelative(-(len(body) + len(v) - setuplen)))
+        body.append(ALJumpRelative(-(len(body) + len(v) - setuplen + 2))) # nastyyyy bug, 2 is for ALJumpRelative on this line and ALJumpTrueRelative on the next one
         v.extend([ALJumpTrueRelative(len(body)), *body, ALDrop()])
         return v
     def visit_IRGetAttribute(self, ic: IRGetAttribute):
