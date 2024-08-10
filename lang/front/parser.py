@@ -330,6 +330,9 @@ class Parser:
             self.next()
             args = []
             while True:
+                if self.tok.type == TokenType.RBRK:
+                    self.next()
+                    break
                 args.append(self.expr())
                 assert self.tok.type in (TokenType.RBRK, TokenType.COMMA), "',' or ']' expected"
                 if self.tok.type == TokenType.RBRK:
