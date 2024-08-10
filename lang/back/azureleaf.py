@@ -18,6 +18,8 @@ class ALInvoke(ALComponent):
 
 class ALDrop(ALComponent):
     pass
+class ALDupe(ALComponent):
+    pass
 
 class ALPushConst(ALComponent):
     def __init__(self, value):
@@ -29,11 +31,19 @@ class ALGet(ALComponent):
     pass
 class ALCompare(ALComponent):
     pass
+class ALAdd(ALComponent):
+    pass
+class ALMultiply(ALComponent):
+    pass
 class ALDivide(ALComponent):
     pass
 class ALReturn(ALComponent):
     pass
 class ALNothing(ALComponent):
+    pass
+class ALPutLocal(ALComponent):
+    pass
+class ALGetAttribute(ALComponent):
     pass
 
 class ALJumpRelative(ALComponent):
@@ -51,6 +61,13 @@ def flatmap(func, x):
     for i in x:
         result.extend(func(i))
     return result
+
+_unique = 0
+def get_unique():
+    global _unique
+    rv = _unique
+    _unique += 1
+    return rv
 
 class AzureLeafCompiler:
     def __init__(self):
@@ -96,5 +113,33 @@ class AzureLeafCompiler:
         return [*self.visit(ic.left), *self.visit(ic.right), ALCompare()]
     def visit_IRB_Divide(self, ic: IRB_Divide):
         return [*self.visit(ic.left), *self.visit(ic.right), ALDivide()]
+    def visit_IRB_Add(self, ic: IRB_Add):
+        return [*self.visit(ic.left), *self.visit(ic.right), ALAdd()]
+    def visit_IRB_Multiply(self, ic: IRB_Multiply):
+        return [*self.visit(ic.left), *self.visit(ic.right), ALMultiply()]
     def visit_IRReturn(self, ic: IRReturn):
         return [*(self.visit(ic.value) if ic.value is not None else (ALNothing(),)), ALReturn()]
+    def visit_IRAssignLocal(self, ic: IRAssignLocal):
+        self.__cfun_locals[-1].add(ic.left)
+        return [*(self.visit(ic.right)), ALPushConst(ic.left), ALPutLocal()]
+    def visit_IRForeach(self, ic: IRForeach):
+        """
+        how foreach would work in python if it was a while loop
+        iterable = iter(cases):
+        while True:
+            try:
+                case = next(iterable)
+            except StopIteration:
+                break
+        """
+        itername = f"__gsl_foreach_{get_unique()}"
+        v = [*self.visit(ic.iterator), ALPushConst("__gsl_iter"), ALGet(), ALInvoke(1), ALPushConst(itername), ALPutLocal()]
+        setuplen = len(v)
+        v.extend([ALPushConst(itername), ALGet(), ALPushConst("__gsl_iter_get"), ALGet(), ALInvoke(1), ALDupe()])
+        v.extend([ALPushConst("__gsl_iter_get_sentinel"), ALGet(), ALInvoke(0), ALCompare()])
+        body = [ALPushConst(ic.name),ALPutLocal(),*flatmap(self.visit, ic.body)]
+        body.append(ALJumpRelative(-(len(body) + len(v) - setuplen)))
+        v.extend([ALJumpTrueRelative(len(body)), *body, ALDrop()])
+        return v
+    def visit_IRGetAttribute(self, ic: IRGetAttribute):
+        return [ALPushConst(ic.attr), *self.visit(ic.obj), ALGetAttribute()]

@@ -10,6 +10,8 @@ class AzureLeafScopedExecutionContextTemplate:
         vx = AzureLeafScopedExecutionContext(self.name, self.body, self.parent_ctx)
         executor.push_context(vx, self.args, args)
 
+SENTINEL = object()
+
 class AzureLeafScopedExecutionContext:
     def __init__(self, name, code, parent_ctx=None):
         self.name = name
@@ -20,14 +22,25 @@ class AzureLeafScopedExecutionContext:
         self.stack = []
         def x__gsl_hacks_buildfunc(ctx, executor, body, args, name):
             self.locals[name] = AzureLeafScopedExecutionContextTemplate(name, args, body, ctx)
+        def x__gsl_iter_get(ctx, executor, thing):
+            try:
+                return next(thing)
+            except StopIteration:
+                return SENTINEL
         self.locals = {
             "__gsl_hacks_listargs": lambda c,e,*a: a,
-            "__gsl_hacks_buildfunc": x__gsl_hacks_buildfunc
+            "__gsl_hacks_buildfunc": x__gsl_hacks_buildfunc,
+            "__gsl_iter": lambda c,e,x: iter(x),
+            "__gsl_iter_get": x__gsl_iter_get,
+            "__gsl_iter_get_sentinel": lambda c,e: SENTINEL,
+            "contains": lambda c,e,a,b: b in a,
+            "range": lambda c,e,*x: range(*x)
         }
     def tick(self, executor):
         if self.pc >= len(self.code):
             return False
         i = self.code[self.pc]
+        #print(self.pc, i)
         self.pc += 1
         if isinstance(i, ALPushConst):
             self.stack.append(i.value)
@@ -36,8 +49,11 @@ class AzureLeafScopedExecutionContext:
             self.stack.append(self.getval(name, executor))
         elif isinstance(i, ALDrop):
             self.stack.pop()
+        elif isinstance(i, ALDupe):
+            self.stack.append(self.stack[-1])
         elif isinstance(i, ALInvoke):
             called = self.stack.pop()
+            #print(called)
             args = (self.stack.pop() for _ in range(i.amount))
             self.stack.append(called(self,executor,*reversed(list(args))))
         elif isinstance(i, ALPushBody):
@@ -47,17 +63,32 @@ class AzureLeafScopedExecutionContext:
         elif isinstance(i, ALDivide):
             b, a = self.stack.pop(), self.stack.pop()
             self.stack.append(a / b)
+        elif isinstance(i, ALAdd):
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(a + b)
+        elif isinstance(i, ALMultiply):
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(a * b)
         elif isinstance(i, ALJumpFalseRelative):
             if not self.stack.pop():
                 self.pc += i.amt
+        elif isinstance(i, ALJumpTrueRelative):
+            if self.stack.pop():
+                self.pc += i.amt
         elif isinstance(i, ALJumpRelative):
             self.pc += i.amt
+        elif isinstance(i, ALGetAttribute):
+            obj, attr = self.stack.pop(), self.stack.pop()
+            self.stack.append(getattr(obj, attr))
         elif isinstance(i, ALReturn):
             rv = self.stack.pop()
             executor.ctx_stack[-2].stack.append(rv)
             return False
         elif isinstance(i, ALNothing):
             self.stack.append(None)
+        elif isinstance(i, ALPutLocal):
+            name, value = self.stack.pop(), self.stack.pop()
+            self.locals[name] = value
         else:
             raise NotImplementedError(f"Opcode not implemented {i}")
         return True
