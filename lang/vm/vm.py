@@ -1,6 +1,6 @@
 from lang.back.azureleaf import *
 
-class AzureLeadScopedExecutionContextTemplate:
+class AzureLeafScopedExecutionContextTemplate:
     def __init__(self, name, args, body, parent_ctx):
         self.name = name
         self.args = args
@@ -19,7 +19,7 @@ class AzureLeafScopedExecutionContext:
         self.pc = 0
         self.stack = []
         def x__gsl_hacks_buildfunc(ctx, executor, body, args, name):
-            self.locals[name] = AzureLeadScopedExecutionContextTemplate(name, args, body, ctx)
+            self.locals[name] = AzureLeafScopedExecutionContextTemplate(name, args, body, ctx)
         self.locals = {
             "__gsl_hacks_listargs": lambda c,e,*a: a,
             "__gsl_hacks_buildfunc": x__gsl_hacks_buildfunc
