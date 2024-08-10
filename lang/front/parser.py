@@ -344,6 +344,7 @@ class Parser:
         elif self.tok.type == TokenType.KEYWORD and self.tok.value == Keyword.FUN:
             return self.func()
         elif self.tok.type == TokenType.NOT:
-            raise NotImplementedError("! is not implemented just yet")
+            self.next()
+            return NodeUnaryOp(UnaryOp.NOT, self.expr())
         else:
             raise NotImplementedError(f"atom {self.tok} err")

@@ -58,6 +58,10 @@ class IRB_Divide(IRComponent):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+class IRU_Not(IRComponent):
+    def __init__(self, right):
+        self.right = right
+
 
 class IRAssignLocal(IRComponent):
     def __init__(self, left, right):
@@ -117,6 +121,11 @@ class IRGenerator:
             BinOp.MUL: IRB_Multiply,
             BinOp.DIV: IRB_Divide
         }[node.op](self.visit(node.left), self.visit(node.right))
+    def visit_NodeUnaryOp(self, node: NodeUnaryOp):
+        return {
+            UnaryOp.NOT: IRU_Not
+        }[node.op](self.visit(node.right))
+
     def visit_NodeReturn(self, node: NodeReturn):
         return IRReturn(self.visit(node.value) if node.value is not None else None)
     def visit_NodeAssign(self, node: NodeAssign):

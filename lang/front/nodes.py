@@ -92,7 +92,6 @@ class BinOp(enum.Enum):
     LTE = 13
     GT = 14
     GTE = 15
-    NOT = 16
 
     LOGAND = 20
     LOGOR = 21
@@ -102,8 +101,16 @@ class BinOp(enum.Enum):
     OR = 31
     XOR = 32
 
+class UnaryOp(enum.Enum):
+    NOT = 1
+
 class NodeBinOp(Node):
     def __init__(self, left, op, right):
         self.left = left
+        self.op = op
+        self.right = right
+
+class NodeUnaryOp(Node):
+    def __init__(self, op, right):
         self.op = op
         self.right = right

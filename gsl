@@ -42,14 +42,19 @@ def compile_azureleaf(ir):
         return e, l, None
 
 if __name__ == "__main__":
+    DEBUG = False
+
     source = open(sys.argv[1]).read()
     tokens = Lexer().run(source)
     ast = Parser().run(tokens)
-    print(ast)
+    if DEBUG:
+        print(ast)
     ir = IRGenerator().run(ast)
-    print(ir)
+    if DEBUG:
+        print(ir)
     azureleaf = AzureLeafCompiler().run(ir)
-    print(azureleaf)
+    if DEBUG:
+        print(azureleaf)
     x = AzureLeafScopedExecutionContext(azureleaf.name, azureleaf.body)
     e = AzureLeafExecutor({"print": lambda ctx, exec, *stuff: print(*stuff)})
     e.push_context(x, azureleaf.args, ())

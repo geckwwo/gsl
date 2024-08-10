@@ -34,6 +34,8 @@ class AzureLeafScopedExecutionContext:
             "__gsl_iter_get": x__gsl_iter_get,
             "__gsl_iter_get_sentinel": lambda c,e: SENTINEL,
             "contains": lambda c,e,a,b: b in a,
+            "append": lambda c,e,a,b: a.append(b),
+            "filterlist": lambda c,e,a,b: list(filter(a, b)),
             "range": lambda c,e,*x: range(*x)
         }
     def tick(self, executor):
@@ -68,6 +70,8 @@ class AzureLeafScopedExecutionContext:
         elif isinstance(i, ALMultiply):
             b, a = self.stack.pop(), self.stack.pop()
             self.stack.append(a * b)
+        elif isinstance(i, ALNot):
+            self.stack.append(not self.stack.pop())
         elif isinstance(i, ALJumpFalseRelative):
             if not self.stack.pop():
                 self.pc += i.amt

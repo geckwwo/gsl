@@ -37,6 +37,8 @@ class ALMultiply(ALComponent):
     pass
 class ALDivide(ALComponent):
     pass
+class ALNot(ALComponent):
+    pass
 class ALReturn(ALComponent):
     pass
 class ALNothing(ALComponent):
@@ -117,6 +119,8 @@ class AzureLeafCompiler:
         return [*self.visit(ic.left), *self.visit(ic.right), ALAdd()]
     def visit_IRB_Multiply(self, ic: IRB_Multiply):
         return [*self.visit(ic.left), *self.visit(ic.right), ALMultiply()]
+    def visit_IRU_Not(self, ic: IRU_Not):
+        return [*self.visit(ic.right), ALNot()]
     def visit_IRReturn(self, ic: IRReturn):
         return [*(self.visit(ic.value) if ic.value is not None else (ALNothing(),)), ALReturn()]
     def visit_IRAssignLocal(self, ic: IRAssignLocal):

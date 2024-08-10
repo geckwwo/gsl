@@ -2,13 +2,16 @@ fun eratosthenes(n) {
     multiples = [];
     foreach(i in range(2, n+1)) {
         if(!contains(multiples, 1)) {
-            print(i);
             foreach(j in range(i*i, n+1, i)) {
-                multiples.append(j);
+                append(multiples, j);
             }
         }
     }
     return multiples;
 }
 
-print(eratosthenes(100));
+max = 100;
+multiples = eratosthenes(max);
+foreach(num in range(max + 1)) {
+    if(!contains(multiples, num)) { print(num); }
+}
