@@ -1,8 +1,14 @@
 from lang.back.azureleaf import *
 
-
-class AzureLeafDataContext:
-    pass
+class AzureLeadScopedExecutionContextTemplate:
+    def __init__(self, name, args, body, parent_ctx):
+        self.name = name
+        self.args = args
+        self.body = body
+        self.parent_ctx = parent_ctx
+    def __call__(self, ctx, executor, *args):
+        vx = AzureLeafScopedExecutionContext(self.name, self.body, self.parent_ctx)
+        executor.push_context(vx, self.args, args)
 
 class AzureLeafScopedExecutionContext:
     def __init__(self, name, code, parent_ctx=None):
@@ -12,7 +18,12 @@ class AzureLeafScopedExecutionContext:
 
         self.pc = 0
         self.stack = []
-        self.locals = {}
+        def x__gsl_hacks_buildfunc(ctx, executor, body, args, name):
+            self.locals[name] = AzureLeadScopedExecutionContextTemplate(name, args, body, ctx)
+        self.locals = {
+            "__gsl_hacks_listargs": lambda c,e,*a: a,
+            "__gsl_hacks_buildfunc": x__gsl_hacks_buildfunc
+        }
     def tick(self, executor):
         if self.pc >= len(self.code):
             return False
@@ -29,6 +40,8 @@ class AzureLeafScopedExecutionContext:
             called = self.stack.pop()
             args = (self.stack.pop() for _ in range(i.amount))
             self.stack.append(called(self,executor,*reversed(list(args))))
+        elif isinstance(i, ALPushBody):
+            self.stack.append(i.value)
         else:
             raise NotImplementedError(f"Opcode not implemented {i}")
         return True

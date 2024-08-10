@@ -48,3 +48,7 @@ class IRGenerator:
         return IRConst(node.value)
     def visit_NodeDiscard(self, node: NodeDiscard):
         return IRDiscard(self.visit(node.expr))
+    def visit_NodeFunction(self, node: NodeFunction):
+        self.__func_local_stack.append([])
+        pbody = list(map(self.visit, node.body))
+        return IRFunction(node.name, node.args, pbody, self.__func_local_stack.pop())

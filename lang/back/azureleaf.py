@@ -22,6 +22,9 @@ class ALDrop(ALComponent):
 class ALPushConst(ALComponent):
     def __init__(self, value):
         self.value = value
+class ALPushBody(ALComponent):
+    def __init__(self, value):
+        self.value = value
 class ALGet(ALComponent):
     pass
 
@@ -40,7 +43,8 @@ class AzureLeafCompiler:
         self.__cfun_locals.append(ic.locals)
         f = ALFunction(ic.name, ic.args, flatmap(self.visit, ic.body))
         self.__cfun_locals.pop()
-        return f
+        # TODO what the fuck is this
+        return [ALPushBody(f.body), *[ALPushConst(x) for x in ic.args], ALPushConst("__gsl_hacks_listargs"), ALGet(), ALInvoke(len(ic.args)), ALPushConst(f.name), ALPushConst("__gsl_hacks_buildfunc"), ALGet(), ALInvoke(3)]
     def visit_IRCall(self, ic: IRCall):
         v = []
         v.extend(flatmap(self.visit, ic.args))
@@ -55,3 +59,8 @@ class AzureLeafCompiler:
         return [ALPushConst(ic.value)]
     def visit_IRIden(self, ic: IRIden):
         return [ALPushConst(ic.iden), ALGet()]
+    def run(self, ic: IRFunction):
+        self.__cfun_locals.append(ic.locals)
+        f = ALFunction(ic.name, ic.args, flatmap(self.visit, ic.body))
+        self.__cfun_locals.pop()
+        return f

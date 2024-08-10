@@ -1,0 +1,5 @@
+fun sayHi(name) {
+    print("Hi,", name);
+}
+sayHi("Kenux");
+sayHi("Ttimofeyka");

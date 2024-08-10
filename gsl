@@ -7,7 +7,7 @@ from lang.front.lexer import Lexer
 from lang.front.parser import Parser
 from lang.middle.ir import IRGenerator
 from lang.back.azureleaf import AzureLeafCompiler
-from lang.vm.vm import AzureLeafExecutor, AzureLeafScopedExecutionContext, AzureLeafDataContext
+from lang.vm.vm import AzureLeafExecutor, AzureLeafScopedExecutionContext
 
 def tokenize(src: str):
     l = Lexer()
@@ -36,15 +36,19 @@ def generate_ir(ast):
 def compile_azureleaf(ir):
     l = AzureLeafCompiler()
     try:
-        return None, l, l.visit(ir)
+        return None, l, l.run(ir)
     except Exception as e:
         traceback.print_exception(e)
         return e, l, None
 
 if __name__ == "__main__":
-    c = compile_azureleaf(generate_ir(parse(tokenize(open(sys.argv[1]).read())[2])[2])[2])[2]
-    x = AzureLeafScopedExecutionContext(c.name, c.body)
+    source = open(sys.argv[1]).read()
+    tokens = Lexer().run(source)
+    ast = Parser().run(tokens)
+    ir = IRGenerator().run(ast)
+    azureleaf = AzureLeafCompiler().run(ir)
+    x = AzureLeafScopedExecutionContext(azureleaf.name, azureleaf.body)
     e = AzureLeafExecutor({"print": lambda ctx, exec, *stuff: print(*stuff)})
-    e.push_context(x, c.args, ())
+    e.push_context(x, azureleaf.args, ())
     while e.tick():
         pass
