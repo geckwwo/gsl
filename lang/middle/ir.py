@@ -28,6 +28,24 @@ class IRConst(IRComponent):
 class IRDiscard(IRComponent):
     def __init__(self, value):
         self.value = value
+class IRReturn(IRComponent):
+    def __init__(self, value):
+        self.value = value
+class IRIf(IRComponent):
+    def __init__(self, cond, if_, elseifs, else_):
+        self.cond = cond
+        self.if_ = if_
+        self.elseifs = elseifs
+        self.else_ = else_
+
+class IRB_Compare(IRComponent):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+class IRB_Divide(IRComponent):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
 
 class IRGenerator:
     def __init__(self):
@@ -52,3 +70,13 @@ class IRGenerator:
         self.__func_local_stack.append([])
         pbody = list(map(self.visit, node.body))
         return IRFunction(node.name, node.args, pbody, self.__func_local_stack.pop())
+    def visit_NodeIf(self, node: NodeIf):
+        # man whatever just get this working
+        return IRIf(self.visit(node.cond), list(map(self.visit, node.body)), list(map(lambda cond, body: (self.visit(cond), list(map(self.visit, body))), node.elseifs)), list(map(self.visit, node.else_)) if node.else_ is not None else None)
+    def visit_NodeBinOp(self, node: NodeBinOp):
+        return {
+            BinOp.EQ: IRB_Compare,
+            BinOp.DIV: IRB_Divide
+        }[node.op](self.visit(node.left), self.visit(node.right))
+    def visit_NodeReturn(self, node: NodeReturn):
+        return IRReturn(self.visit(node.value) if node.value is not None else None)

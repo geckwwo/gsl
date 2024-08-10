@@ -1,5 +1,18 @@
 fun sayHi(name) {
+    if(name == "Ttimofeyka") {
+        print("Nope!");
+        return;
+    }
     print("Hi,", name);
+}
+fun div(n1, n2) {
+    if(n2 == 0) {
+        print("No zero division!");
+    } else {
+        return n1 / n2;
+    }
 }
 sayHi("Kenux");
 sayHi("Ttimofeyka");
+print(div(30,2));
+div(30,0);

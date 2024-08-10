@@ -47,7 +47,7 @@ class Parser:
                 return self.foreach_stmt()
             elif self.tok.value == Keyword.RETURN:
                 self.next()
-                val = self.expr()
+                val = self.expr() if self.tok.type != TokenType.SEMICOLON else None
                 assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
                 self.next()
                 return NodeReturn(val)
@@ -63,7 +63,6 @@ class Parser:
             if self.tok.type == TokenType.ASSIGN:
                 self.next()
                 assert isinstance(e, (NodeIden,)), f"cannot assign to {e}"
-                print("assign to", e)
                 e = NodeAssign(e, self.expr())
                 assert self.tok.type == TokenType.SEMICOLON, "semicolon expected"
                 self.next()

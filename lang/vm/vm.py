@@ -42,6 +42,22 @@ class AzureLeafScopedExecutionContext:
             self.stack.append(called(self,executor,*reversed(list(args))))
         elif isinstance(i, ALPushBody):
             self.stack.append(i.value)
+        elif isinstance(i, ALCompare):
+            self.stack.append(self.stack.pop() == self.stack.pop())
+        elif isinstance(i, ALDivide):
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(a / b)
+        elif isinstance(i, ALJumpFalseRelative):
+            if not self.stack.pop():
+                self.pc += i.amt
+        elif isinstance(i, ALJumpRelative):
+            self.pc += i.amt
+        elif isinstance(i, ALReturn):
+            rv = self.stack.pop()
+            executor.ctx_stack[-2].stack.append(rv)
+            return False
+        elif isinstance(i, ALNothing):
+            self.stack.append(None)
         else:
             raise NotImplementedError(f"Opcode not implemented {i}")
         return True

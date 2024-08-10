@@ -27,6 +27,24 @@ class ALPushBody(ALComponent):
         self.value = value
 class ALGet(ALComponent):
     pass
+class ALCompare(ALComponent):
+    pass
+class ALDivide(ALComponent):
+    pass
+class ALReturn(ALComponent):
+    pass
+class ALNothing(ALComponent):
+    pass
+
+class ALJumpRelative(ALComponent):
+    def __init__(self, amt):
+        self.amt = amt
+class ALJumpTrueRelative(ALComponent):
+    def __init__(self, amt):
+        self.amt = amt
+class ALJumpFalseRelative(ALComponent):
+    def __init__(self, amt):
+        self.amt = amt
 
 def flatmap(func, x):
     result = []
@@ -64,3 +82,19 @@ class AzureLeafCompiler:
         f = ALFunction(ic.name, ic.args, flatmap(self.visit, ic.body))
         self.__cfun_locals.pop()
         return f
+    def visit_IRIf(self, ic: IRIf):
+        assert len(ic.elseifs) == 0, "elseif is not supported right now by azure leaf compiler"
+        v = self.visit(ic.cond)
+        c = flatmap(self.visit, ic.if_)
+        if len(ic.else_) == 0:
+            v.extend([ALJumpFalseRelative(len(c)), *c])
+        else:
+            elsec = flatmap(self.visit, ic.else_)
+            v.extend([ALJumpFalseRelative(len(c)+1), *c, ALJumpRelative(len(elsec)), *elsec])
+        return v
+    def visit_IRB_Compare(self, ic: IRB_Compare):
+        return [*self.visit(ic.left), *self.visit(ic.right), ALCompare()]
+    def visit_IRB_Divide(self, ic: IRB_Divide):
+        return [*self.visit(ic.left), *self.visit(ic.right), ALDivide()]
+    def visit_IRReturn(self, ic: IRReturn):
+        return [*(self.visit(ic.value) if ic.value is not None else (ALNothing(),)), ALReturn()]
